@@ -21,8 +21,8 @@ class LayerNorm2d(nn.Module):
     def forward(self, x):
         normalized_shape = x.size()[1:]
         if self.affine:
-          return F.layer_norm(x, normalized_shape, \
-              self.weight.expand(normalized_shape), 
+          return F.layer_norm(x, normalized_shape,
+              self.weight.expand(normalized_shape),
               self.bias.expand(normalized_shape))
               
         else:
@@ -365,4 +365,4 @@ class FinalBlock2d(nn.Module):
         self.model = nn.Sequential(conv, out_nonlinearity)
     def forward(self, x):
         out = self.model(x)
-        return out          
+        return out

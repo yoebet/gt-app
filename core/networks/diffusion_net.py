@@ -73,7 +73,6 @@ class DiffusionNet(Module):
         return latent
 
     def _latent_to_face3d(self, latent):
-        face3d = None
         if self.face3d_latent_type == "face3d":
             face3d = latent
         elif self.face3d_latent_type == "normalized_face3d":
@@ -305,36 +304,7 @@ class DiffusionNet(Module):
 
         if ret_traj:
             raise NotImplementedError
-            return traj
         else:
             latent_output = traj[0]
             face3d_output = self._latent_to_face3d(latent_output)
             return face3d_output
-
-
-if __name__ == "__main__":
-    from core.networks.diffusion_util import NoisePredictor, VarianceSchedule
-
-    diffnet = DiffusionNet(
-        net=NoisePredictor(),
-        var_sched=VarianceSchedule(
-            num_steps=500, beta_1=1e-4, beta_T=0.02, mode="linear"
-        ),
-    )
-
-    import torch
-
-    gt_face3d = torch.randn(16, 64, 64)
-    audio = torch.randn(16, 64, 11)
-    style_clip = torch.randn(16, 256, 64)
-    style_pad_mask = torch.ones(16, 256)
-
-    context = {
-        "audio": audio,
-        "style_clip": style_clip,
-        "style_pad_mask": style_pad_mask,
-    }
-
-    loss = diffnet.get_loss(gt_face3d, context)
-
-    print("hello")

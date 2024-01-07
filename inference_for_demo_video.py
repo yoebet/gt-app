@@ -106,12 +106,9 @@ def inference_one_video(
     )
     gen_exp = gen_exp_stack[0].cpu().numpy()
 
-    pose_ext = pose_path[-3:]
-    pose = None
     pose = get_pose_params(pose_path)
     # (L, 9)
 
-    selected_pose = None
     if len(pose) >= len(gen_exp):
         selected_pose = pose[: len(gen_exp)]
     else:
