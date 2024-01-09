@@ -1,6 +1,5 @@
 from yacs.config import CfgNode as CN
 
-
 _C = CN()
 _C.TAG = "style_id_emotion"
 _C.DECODER_TYPE = "DisentangleDecoder"
@@ -72,7 +71,9 @@ _C.DECODER.dynamic_ratio = None
 # _C.DECODER.lower_face3d_indices = tuple(range(19, 46))
 # BFM basis:
 # fmt: off
-_C.DECODER.upper_face3d_indices = [6, 8, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63] 
+_C.DECODER.upper_face3d_indices = [6, 8, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34,
+                                   35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+                                   56, 57, 58, 59, 60, 61, 62, 63]
 # fmt: on
 _C.DECODER.lower_face3d_indices = [0, 1, 2, 3, 4, 5, 7, 9, 10, 11, 12, 13, 14]
 
@@ -86,6 +87,6 @@ _C.INFERENCE = CN()
 _C.INFERENCE.CHECKPOINT = "checkpoints/denoising_network.pth"
 
 
-def get_cfg_defaults():
+def get_cfg_defaults() -> CN:
     """Get a yacs CfgNode object with default values for my_project."""
     return _C.clone()
