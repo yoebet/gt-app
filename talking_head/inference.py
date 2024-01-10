@@ -114,7 +114,7 @@ def inference_one_video(
     return output_path
 
 
-def inference(cfg: CfgNode, params: TaskParams):
+def inference(cfg: CfgNode, params: TaskParams, log_file=None):
     device = torch.device(params.device)
 
     task_dir = params.task_dir
@@ -133,7 +133,12 @@ def inference(cfg: CfgNode, params: TaskParams):
     # get audio in 16000Hz
     wav_16k_path = os.path.join(tmp_dir, f"{output_name}_16K.wav")
     command = f"ffmpeg -y -i {params.audio_path} -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 {wav_16k_path}"
-    subprocess.run(command.split())
+    print(command)
+    if log_file is None:
+        subprocess.run(command.split())
+    else:
+        log_file_h = open(log_file, 'a')
+        subprocess.run(command.split(), stdout=log_file_h, stderr=log_file_h)
 
     hf_params = {
         'use_safetensors': True,
@@ -189,6 +194,7 @@ def inference(cfg: CfgNode, params: TaskParams):
             device,
             fps=25,
             no_move=False,
+            log_file=log_file,
         )
         params.output_video_path = output_video_path
 

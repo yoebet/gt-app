@@ -1,0 +1,11 @@
+
+python inference_for_demo_video.py \
+--wav_path data/audio/acknowledgement_english.m4a \
+--style_clip_path data/style_clip/3DMM/M030_front_neutral_level1_001.mat \
+--pose_path data/pose/RichardShelby_front_neutral_level1_001.mat \
+--image_path data/src_img/uncropped/male_face.png \
+--cfg_scale 1.0 \
+--max_gen_len 30 \
+--device cpu \
+--output_name acknowledgement_english@M030_front_neutral_level1_002@male_face
+

@@ -45,7 +45,7 @@ def get_style_video_lists(video_list, style_type):
 
 
 def get_face3d_clip(
-    video_name, video_root_dir, num_frames, start_idx, dtype=torch.float32
+        video_name, video_root_dir, num_frames, start_idx, dtype=torch.float32
 ):
     """_summary_
 
@@ -83,19 +83,19 @@ def get_face3d_clip(
     else:
         raise ValueError(f"Invalid start_idx {start_idx}")
 
-    face3d_clip = face3d_exp[clip_start_idx : clip_start_idx + clip_num_frames]
+    face3d_clip = face3d_exp[clip_start_idx: clip_start_idx + clip_num_frames]
     face3d_clip = torch.tensor(face3d_clip, dtype=dtype)
 
     return face3d_clip
 
 
 def get_video_style_clip(
-    video_name,
-    video_root_dir,
-    style_max_len,
-    start_idx="random",
-    dtype=torch.float32,
-    return_start_idx=False,
+        video_name,
+        video_root_dir,
+        style_max_len,
+        start_idx="random",
+        dtype=torch.float32,
+        return_start_idx=False,
 ):
     video_path = os.path.join(video_root_dir, video_name)
     if video_path[-3:] == "mat":
@@ -120,7 +120,7 @@ def get_video_style_clip(
         else:
             raise ValueError(f"Invalid start_idx {start_idx}")
 
-        face3d_clip = face3d_exp[clip_start_idx : clip_start_idx + clip_num_frames]
+        face3d_clip = face3d_exp[clip_start_idx: clip_start_idx + clip_num_frames]
         pad_mask = torch.tensor([False] * style_max_len)
     else:
         clip_start_idx = None
@@ -135,11 +135,11 @@ def get_video_style_clip(
 
 
 def get_video_style_clip_from_np(
-    face3d_exp,
-    style_max_len,
-    start_idx="random",
-    dtype=torch.float32,
-    return_start_idx=False,
+        face3d_exp,
+        style_max_len,
+        start_idx="random",
+        dtype=torch.float32,
+        return_start_idx=False,
 ):
     face3d_exp = torch.tensor(face3d_exp, dtype=dtype)
 
@@ -155,7 +155,7 @@ def get_video_style_clip_from_np(
         else:
             raise ValueError(f"Invalid start_idx {start_idx}")
 
-        face3d_clip = face3d_exp[clip_start_idx : clip_start_idx + clip_num_frames]
+        face3d_clip = face3d_exp[clip_start_idx: clip_start_idx + clip_num_frames]
         pad_mask = torch.tensor([False] * style_max_len)
     else:
         clip_start_idx = None
@@ -370,8 +370,8 @@ def reshape_audio_feat(style_audio_all_raw, stride):
         _type_: (L, C * stride)
     """
     style_audio_all_raw = style_audio_all_raw[
-        : style_audio_all_raw.shape[0] // stride * stride
-    ]
+                          : style_audio_all_raw.shape[0] // stride * stride
+                          ]
     style_audio_all_raw = style_audio_all_raw.reshape(
         style_audio_all_raw.shape[0] // stride, stride, style_audio_all_raw.shape[1]
     )
@@ -447,10 +447,42 @@ def crop_src_image(src_img, save_img, increase_ratio, detector=None):
         bbox = compute_aspect_preserved_bbox(
             tuple(bbox), increase_ratio, img.shape[0], img.shape[1]
         )
-        img = img[bbox[1] : bbox[3], bbox[0] : bbox[2]]
+        img = img[bbox[1]: bbox[3], bbox[0]: bbox[2]]
         img = cv2.resize(img, (256, 256))
         cv2.imwrite(save_img, img)
     else:
         raise ValueError("No face detected in the input image")
         # img = cv2.resize(img, (256, 256))
         # cv2.imwrite(save_img, img)
+
+
+def face_detect_from_buff(img_buffer):
+    detector = dlib.get_frontal_face_detector()
+    bytes_as_np_array = np.frombuffer(img_buffer, dtype=np.uint8)
+    img = cv2.imdecode(bytes_as_np_array, cv2.IMREAD_COLOR)
+    faces = detector(img, 0)
+    return len(faces) > 0
+
+
+def crop_from_buff(img_buffer, increase_ratio):
+    detector = dlib.get_frontal_face_detector()
+    bytes_as_np_array = np.frombuffer(img_buffer, dtype=np.uint8)
+    img = cv2.imdecode(bytes_as_np_array, cv2.IMREAD_COLOR)
+    faces = detector(img, 0)
+    h, width, _ = img.shape
+    if len(faces) > 0:
+        bbox = [faces[0].left(), faces[0].top(), faces[0].right(), faces[0].bottom()]
+        l = bbox[3] - bbox[1]
+        bbox[1] = bbox[1] - l * 0.1
+        bbox[3] = bbox[3] - l * 0.1
+        bbox[1] = max(0, bbox[1])
+        bbox[3] = min(h, bbox[3])
+        bbox = compute_aspect_preserved_bbox(
+            tuple(bbox), increase_ratio, img.shape[0], img.shape[1]
+        )
+        img = img[bbox[1]: bbox[3], bbox[0]: bbox[2]]
+        img = cv2.resize(img, (256, 256))
+        is_success, im_buf_arr = cv2.imencode(".png", img)
+        return im_buf_arr.tobytes()
+    else:
+        raise ValueError("No face detected in the input image")

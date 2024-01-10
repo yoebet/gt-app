@@ -1,5 +1,16 @@
 import os
-from core.utils import crop_src_image
+import requests
+from core.utils import crop_src_image, face_detect_from_buff, crop_from_buff
+
+
+def detect_face(image_url):
+    res = requests.get(image_url)
+    return face_detect_from_buff(res.content)
+
+
+def crop_face(image_url, increase_ratio=0.4):
+    res = requests.get(image_url)
+    return crop_from_buff(res.content, increase_ratio=increase_ratio)
 
 
 def detect_and_crop(image_path, crop_image_path=None, increase_ratio=0.4):

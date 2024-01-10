@@ -37,17 +37,18 @@ def get_netG(checkpoint_path, device):
 
 @torch.no_grad()
 def render_video(
-    net_G,
-    src_img_path,
-    exp_path,
-    wav_path,
-    output_path,
-    device,
-    silent=False,
-    semantic_radius=13,
-    fps=30,
-    split_size=16,
-    no_move=False,
+        net_G,
+        src_img_path,
+        exp_path,
+        wav_path,
+        output_path,
+        device,
+        silent=False,
+        semantic_radius=13,
+        fps=30,
+        split_size=16,
+        no_move=False,
+        log_file=None,
 ):
     """
     exp: (N, 73)
@@ -110,7 +111,9 @@ def render_video(
     else:
         silent_video_path = f"{output_path}-silent.mp4"
         torchvision.io.write_video(silent_video_path, transformed_imgs.cpu(), fps)
-        os.system(
-            f"ffmpeg -loglevel quiet -y -i {silent_video_path} -i {wav_path} -shortest {output_path}"
-        )
+        cmd = f"ffmpeg -loglevel quiet -y -i {silent_video_path} -i {wav_path} -shortest {output_path}"
+        if log_file is None:
+            os.system(cmd)
+        else:
+            os.system(f'{cmd} >> "{log_file}" 2>&1')
         os.remove(silent_video_path)

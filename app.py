@@ -3,12 +3,14 @@ import re
 from pprint import pformat
 import base64
 import shutil
+from io import BytesIO
 import json
 import torch
 from flask import Flask, jsonify, request, Response, abort, send_file
 from dotenv import dotenv_values
 from talking_head.params import Task, LaunchOptions
 from talking_head.dirs import get_task_dir
+from talking_head import crop
 from launch import launch
 
 app = Flask(__name__)
@@ -73,16 +75,6 @@ def launch_task():
     task = Task(**task_params)
     launch_options = LaunchOptions(**launch_params)
 
-    device_index = launch_options.device_index
-    if device_index is not None:
-        free, total = torch.cuda.mem_get_info(device_index)
-        k = 1024
-        if free < 10 * k * k * k:
-            return (jsonify({
-                'success': False,
-                'error_message': 'device occupied',
-            }))
-
     try:
         launch_result = launch(app.config, task, launch_options, logger=logger)
     except Exception as e:
@@ -116,7 +108,7 @@ def check_task_status(task_id):
             return jsonify({
                 'success': True,
                 'task_status': 'failed',
-                'failure_reason': 'wpn'
+                'error_message': 'wpn'
             })
         try:
             rp.cmdline()
@@ -158,21 +150,91 @@ def check_task_status(task_id):
                 })
             else:
                 return jsonify({
-                    'success': False,
+                    'success': True,
                     'task_status': 'failed',
-                    'failure_reason': launch_result['error_message']
+                    'error_message': launch_result['error_message']
                 })
         else:
             return jsonify({
                 'success': True,
                 'task_status': 'failed',
-                'failure_reason': 'ntest'
+                'error_message': 'ntest'
             })
     else:
         return jsonify({
             'success': False,
             'error_message': 'no such task'
         })
+
+
+@app.route('/task/<task_id>/<sub_dir>/result', methods=('GET',))
+def get_result_info(task_id, sub_dir):
+    TASKS_DIR = app.config['TASKS_DIR']
+    task_dir = get_task_dir(TASKS_DIR, task_id, sub_dir)
+
+    result_file = os.path.join(task_dir, 'result.json')
+    if not os.path.exists(result_file):
+        return jsonify({
+            'success': False,
+            'error_message': 'no result file'
+        })
+
+    return send_file(result_file, mimetype='application/json', as_attachment=False)
+
+
+@app.route('/task/<task_id>/<sub_dir>/result_file/<filename>', methods=('GET',))
+def get_result_file(task_id, sub_dir, filename: str):
+    TASKS_DIR = app.config['TASKS_DIR']
+    task_dir = get_task_dir(TASKS_DIR, task_id, sub_dir)
+
+    if filename.startswith('/') or '..' in filename:
+        abort(404)
+
+    path = os.path.join(task_dir, filename)
+    if not os.path.exists(path):
+        abort(404)
+
+    return send_file(path)
+
+
+@app.route('/detect_face', methods=('POST',))
+def detect_face():
+    req = request.get_json()
+    image_url = req.get('image_url')
+    try:
+        detected = crop.detect_face(image_url)
+        return jsonify({'success': True, 'detected': detected})
+    except Exception as e:
+        logger.error(str(e))
+        return jsonify({'success': False, 'error_message': str(e)})
+
+
+@app.route('/crop_face_download', methods=('POST',))
+def crop_face_download():
+    req = request.get_json()
+    image_url = req.get('image_url')
+    try:
+        bytes = crop.crop_face(image_url)
+        buffer = BytesIO(bytes)
+        return send_file(buffer, mimetype='image/png', download_name='cropped.png')
+    except Exception as e:
+        logger.error(str(e))
+        abort(400)
+
+
+@app.route('/crop_face', methods=('POST',))
+def crop_face():
+    req = request.get_json()
+    image_url = req.get('image_url')
+    increase_ratio = req.get('increase_ratio')
+    try:
+        bytes = crop.crop_face(image_url, increase_ratio)
+        encoded = base64.b64encode(bytes).decode('utf-8')
+        encoded = f'data:image/png;base64,{encoded}'
+        return jsonify({'success': True, 'image_b64': encoded})
+    except Exception as e:
+        logger.error(str(e))
+        return jsonify({'success': False, 'error_message': str(e)})
 
 
 def get():

@@ -31,7 +31,7 @@ Authorization: {{auth}}
 {
   "task": {
     "task_id": "ag2sf",
-    "subdir": "test1",
+    "sub_dir": "test1",
     "image_url": "http://localhost:8000/20231101-173105.jpeg",
     "audio_url": "http://localhost:8000/棉田.ape"
   },
@@ -51,7 +51,7 @@ Authorization: {{auth}}
 {
   "task": {
     "task_id": "ss",
-    "subdir": "test1",
+    "sub_dir": "test1",
     "image_url": "http://localhost:8000/20231101-173105.jpeg",
     "audio_url": "http://localhost:8000/棉田.ape"
   },
@@ -60,6 +60,50 @@ Authorization: {{auth}}
   }
 }
 
+### launch - run_mode thread/process/sync
+
+POST {{base}}/launch
+Content-Type: application/json
+Accept: application/json
+Authorization: {{auth}}
+
+{
+  "task": {
+    "task_id": "ss",
+    "sub_dir": "thread",
+    "max_gen_len": 15,
+    "image_url": "http://localhost:8000/20231101-173105.jpeg",
+    "audio_url": "http://localhost:8000/你的样子.mp3"
+  },
+  "launch": {
+    "hf_hub_offline": true,
+    "run_mode": "thread"
+  }
+}
+
+
+### launch - tt
+
+POST {{base}}/launch
+Content-Type: application/json
+Accept: application/json
+Authorization: {{auth}}
+
+{
+  "task": {
+    "task_id": "AAiuoQicxcC5OZbP",
+    "sub_dir": "2024-01-14",
+    "max_gen_len": 600,
+    "image_url": "http://localhost:8000/20231101-173105.jpeg",
+    "audio_url": "http://localhost:8000/ndyz.mp3",
+    "cfg_scale": 2,
+    "img_crop": true
+  },
+  "launch": {
+    "hf_hub_offline": true,
+    "run_mode": "thread"
+  }
+}
 
 ### task - status
 
@@ -71,5 +115,57 @@ Authorization: {{auth}}
 {
   "root_pid": "9417199",
   "sub_dir": "test1"
+}
+
+
+### result info
+
+GET {{base}}/task/ss/test1/result
+Accept: application/json
+Authorization: {{auth}}
+
+
+### cropped_image
+
+GET {{base}}/task/ss/test1/result_file/20231101-173105-cropped.jpeg
+Authorization: {{auth}}
+
+
+### result_video
+
+GET {{base}}/task/ss/test1/result_file/output.mp4
+Authorization: {{auth}}
+
+
+### detect face
+
+POST {{base}}/detect_face
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "image_url": "http://localhost:8000/1700919408_1.png"
+}
+
+
+### crop face
+
+POST {{base}}/crop_face
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "image_url": "http://localhost:8000/20231101-173105.jpeg"
+}
+
+
+### crop face 2
+
+POST {{base}}/crop_face2
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "image_url": "http://localhost:8000/20231101-173105.jpeg"
 }
 
