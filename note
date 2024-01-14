@@ -9,3 +9,12 @@ python inference_for_demo_video.py \
 --device cpu \
 --output_name acknowledgement_english@M030_front_neutral_level1_002@male_face
 
+
+
+ffmpeg -i output.mp4 2>&1 | grep Duration
+
+ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 output.mp4
+ffprobe -v error -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 -select_streams v:0 output.mp4
+
+ffprobe -v quiet -show_streams -select_streams v:0 -of json output.mp4
+

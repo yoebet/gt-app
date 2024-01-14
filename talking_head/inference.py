@@ -198,6 +198,11 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
         )
         params.output_video_path = output_video_path
 
+        video_duration = subprocess.check_output(
+            f'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{output_video_path}"',
+            shell=True).decode()
+        params.output_video_duration = video_duration.strip()
+
         # add watermark
         # no_watermark_video_path = f"{output_video_path}-no_watermark.mp4"
         # shutil.move(output_video_path, no_watermark_video_path)

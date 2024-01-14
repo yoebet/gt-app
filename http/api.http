@@ -91,11 +91,11 @@ Authorization: {{auth}}
 
 {
   "task": {
-    "task_id": "AAiuoQicxcC5OZbP",
-    "sub_dir": "2024-01-14",
-    "max_gen_len": 600,
-    "image_url": "http://localhost:8000/20231101-173105.jpeg",
-    "audio_url": "http://localhost:8000/ndyz.mp3",
+    "task_id": "CCiuoQicxcC5OZbP",
+    "sub_dir": "2024-01-15",
+    "max_gen_len": 60,
+    "image_url": "https://oss-dev.tishi.top/tasks/2324882932984990/mj/18qcskmjdcccs007_Eastern_face_middle-aged_man_with_vicissitudes_77507a7b-2098-4762-b8c2-0072dc730a8c.png?image_process=crop,w_816,h_1456,x_816,y_0",
+    "audio_url": "https://oss-prod.tishi.top/sds/dreamtalk/2024-01-14/vc3ABGKTHo5XGhG4/1705222946/output.mp4",
     "cfg_scale": 2,
     "img_crop": true
   },

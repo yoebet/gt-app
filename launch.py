@@ -3,6 +3,7 @@ import os
 import random
 import sys
 import warnings
+import subprocess
 from threading import Thread
 from multiprocessing import Process
 from contextlib import redirect_stdout, redirect_stderr
@@ -57,6 +58,7 @@ def run_sync(model_cfg, params: TaskParams, /,
         result['success'] = True
         result['cropped_image_file'] = os.path.basename(params.cropped_image_path)
         result['output_video_file'] = os.path.basename(params.output_video_path)
+        result['output_video_duration'] = os.path.basename(params.output_video_duration)
     except Exception as e:
         logger.error(e)
         result['success'] = False
@@ -104,6 +106,11 @@ def launch(config, task: Task, launch_options: LaunchOptions, logger=None):
 
     params.image_path = download(task.image_url, task_dir, 'jpg')
     params.audio_path = download(task.audio_url, task_dir, 'm4a')
+
+    audio_duration = subprocess.check_output(
+        f'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{params.audio_path}"',
+        shell=True).decode()
+    params.output_video_duration = audio_duration.strip()
 
     if params.img_crop:
         params.cropped_image_path = detect_and_crop(params.image_path)
