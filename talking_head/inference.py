@@ -106,7 +106,7 @@ def inference_one_video(
     if len(pose) >= len(gen_exp):
         selected_pose = pose[: len(gen_exp)]
     else:
-        selected_pose = pose[-1].unsqueeze(0).repeat(len(gen_exp), 1)
+        selected_pose = pose[-1][np.newaxis, ...].repeat(len(gen_exp), 0)
         selected_pose[: len(pose)] = pose
 
     gen_exp_pose = np.concatenate((gen_exp, selected_pose), axis=1)

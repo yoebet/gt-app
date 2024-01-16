@@ -2,6 +2,7 @@ import dataclasses
 import os
 import random
 import sys
+import traceback
 import warnings
 import subprocess
 from threading import Thread
@@ -74,7 +75,7 @@ def run_sync(model_cfg, params: TaskParams, /,
             speech_array, sampling_rate = torchaudio.load(params.audio_path)
             tensor_writer.add_audio('input audio', speech_array[0], 0, sample_rate=sampling_rate)
         except Exception as e:
-            logger.error(str(e))
+            print(str(e), file=sys.stderr)
 
     if result is None:
         result = {}
@@ -99,10 +100,11 @@ def run_sync(model_cfg, params: TaskParams, /,
         #             frames = frames.unsqueeze(0)
         #         tensor_writer.add_video('output video', frames, 0)
         #     except Exception as e:
-        #         logger.error(str(e))
+        #         print(str(e), file=sys.stderr)
 
     except Exception as e:
-        logger.error(e)
+        traceback.print_exc()
+        logger.error(f'{params.task_id} {str(e)}')
         result['success'] = False
         result['error_message'] = str(e)
     result['finished_at'] = datetime.now().isoformat()
@@ -147,9 +149,10 @@ def launch(config, task: Task, launch_options: LaunchOptions, logger=None):
     params.task_dir = task_dir
 
     TF_LOGS_DIR = config['TF_LOGS_DIR']
-    logging_dir = get_tf_logging_dir(TF_LOGS_DIR, task.task_id, task.sub_dir)
-    os.makedirs(logging_dir, exist_ok=True)
-    params.tf_logging_dir = logging_dir
+    if TF_LOGS_DIR is not None and TF_LOGS_DIR != '':
+        logging_dir = get_tf_logging_dir(TF_LOGS_DIR, task.task_id, task.sub_dir)
+        os.makedirs(logging_dir, exist_ok=True)
+        params.tf_logging_dir = logging_dir
 
     params.image_path = download(task.image_url, task_dir, f'input-image', '.jpg')
     params.audio_path = download(task.audio_url, task_dir, f'input-audio', '.m4a')
