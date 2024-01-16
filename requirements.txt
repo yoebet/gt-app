@@ -26,3 +26,5 @@ opencv-python
 imageio
 ffmpeg-python
 av
+tensorboard
+moviepy

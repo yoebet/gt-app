@@ -155,6 +155,11 @@ def check_task_status(task_id):
                     'error_message': launch_result['error_message']
                 })
         else:
+            if pid is None:
+                return jsonify({
+                    'success': True,
+                    'task_status': 'running',
+                })
             return jsonify({
                 'success': True,
                 'task_status': 'failed',

@@ -35,3 +35,4 @@ class TaskParams(Task, LaunchOptions):
     cropped_image_path: Optional[str] = None
     output_video_path: Optional[str] = None
     output_video_duration: Optional[str] = None
+    tf_logging_dir: Optional[str] = None

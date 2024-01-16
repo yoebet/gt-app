@@ -9,10 +9,11 @@ def get_task_dir(tasks_dir: str, task_id: str, sub_dir: str = None):
     return task_dir
 
 
-def get_tf_logging_dir(TF_LOGS_DIR: str, sub_dir: str = None):
-    logging_dir = TF_LOGS_DIR
+def get_tf_logging_dir(tf_logs_dir: str, task_id: str, sub_dir: str = None):
     if sub_dir == '' or sub_dir == '_':
         sub_dir = None
     if sub_dir is not None:
-        return f'{logging_dir}/{sub_dir}'
+        logging_dir = f'{tf_logs_dir}/{sub_dir}/t_{task_id}'
+    else:
+        logging_dir = f'{tf_logs_dir}/t_{task_id}'
     return logging_dir

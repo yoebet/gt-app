@@ -12,13 +12,18 @@ import json
 import time
 from datetime import datetime
 import torch
+import torchaudio
+import torchvision
+from torch.utils.tensorboard import SummaryWriter
 import requests
 from urllib.parse import urlparse
 import logging
+from PIL import Image
+import numpy as np
 
 from configs.default import get_cfg_defaults
 from talking_head.params import Task, LaunchOptions, TaskParams
-from talking_head.dirs import get_task_dir
+from talking_head.dirs import get_task_dir, get_tf_logging_dir
 from talking_head.inference import inference
 from talking_head.crop import detect_and_crop
 
@@ -29,22 +34,48 @@ logging.basicConfig(
 )
 
 
-def download(resource_url, target_dir, default_ext):
+def download(resource_url, target_dir, filename, default_ext):
     if not resource_url.startswith('http'):
         raise Exception(f'must be url: {resource_url}')
     resource_path = urlparse(resource_url).path
     resource_name = os.path.basename(resource_path)
-    if '.' not in resource_name and default_ext is not None:
-        resource_name = f'{resource_name}.{default_ext}'
-    full_path = f'{target_dir}/{resource_name}'
+    base_name, ext = os.path.splitext(resource_name)
+    if filename is None:
+        filename = base_name
+    if ext is None:
+        ext = default_ext
+    if ext is not None:
+        filename = f'{filename}{ext}'
+
+    full_path = f'{target_dir}/{filename}'
     with requests.get(resource_url, stream=True) as res:
         with open(full_path, 'wb') as f:
             shutil.copyfileobj(res.raw, f)
     return full_path
 
 
+def tf_log_img(writer: SummaryWriter, tag, image_path, global_step=0):
+    img = Image.open(image_path)
+    if not img.mode == "RGB":
+        img = img.convert("RGB")
+    np_image = np.asarray(img)
+    writer.add_image(tag, np_image, global_step, dataformats="HWC")
+
+
 def run_sync(model_cfg, params: TaskParams, /,
              *, logger, result_file: str, result, log_file: str = None):
+    tensor_writer = None
+    if params.tf_logging_dir is not None:
+        try:
+            tensor_writer = SummaryWriter(params.tf_logging_dir)
+            tf_log_img(tensor_writer, 'input image', params.image_path)
+            tf_log_img(tensor_writer, 'cropped image', params.cropped_image_path)
+            # wav_16k_path = os.path.join(params.task_dir, 'tmp', f"output_16K.wav")
+            speech_array, sampling_rate = torchaudio.load(params.audio_path)
+            tensor_writer.add_audio('input audio', speech_array[0], 0, sample_rate=sampling_rate)
+        except Exception as e:
+            logger.error(str(e))
+
     if result is None:
         result = {}
     try:
@@ -59,6 +90,17 @@ def run_sync(model_cfg, params: TaskParams, /,
         result['cropped_image_file'] = os.path.basename(params.cropped_image_path)
         result['output_video_file'] = os.path.basename(params.output_video_path)
         result['output_video_duration'] = os.path.basename(params.output_video_duration)
+
+        # if tensor_writer is not None:
+        #     try:
+        #         frames, a_frames, va_info = torchvision.io.read_video(params.output_video_path, output_format="TCHW")
+        #         # print(va_info)
+        #         if len(frames.shape) == 4:
+        #             frames = frames.unsqueeze(0)
+        #         tensor_writer.add_video('output video', frames, 0)
+        #     except Exception as e:
+        #         logger.error(str(e))
+
     except Exception as e:
         logger.error(e)
         result['success'] = False
@@ -104,8 +146,13 @@ def launch(config, task: Task, launch_options: LaunchOptions, logger=None):
     os.makedirs(task_dir, exist_ok=True)
     params.task_dir = task_dir
 
-    params.image_path = download(task.image_url, task_dir, 'jpg')
-    params.audio_path = download(task.audio_url, task_dir, 'm4a')
+    TF_LOGS_DIR = config['TF_LOGS_DIR']
+    logging_dir = get_tf_logging_dir(TF_LOGS_DIR, task.task_id, task.sub_dir)
+    os.makedirs(logging_dir, exist_ok=True)
+    params.tf_logging_dir = logging_dir
+
+    params.image_path = download(task.image_url, task_dir, f'input-image', '.jpg')
+    params.audio_path = download(task.audio_url, task_dir, f'input-audio', '.m4a')
 
     audio_duration = subprocess.check_output(
         f'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{params.audio_path}"',
