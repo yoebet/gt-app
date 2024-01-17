@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import math
 import shutil
 import subprocess
 from yacs.config import CfgNode
@@ -157,12 +158,27 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
     inputs = wav2vec_processor(
         audio_data, sampling_rate=16_000, return_tensors="pt", padding=True
     )
+    # torch.Size([1, x])
+    input_values = inputs.input_values
+    chuck_len = 16_000 * 20
+    n_chucks = math.ceil(input_values.shape[1] / chuck_len)
+    if input_values.shape[1] % chuck_len < 16_000 * 2:
+        n_chucks -= 1
 
+    audio_embeddings = []
     with torch.no_grad():
-        audio_embedding = wav2vec_model(
-            inputs.input_values.to(device), return_dict=False
-        )[0]
+        for ci in range(n_chucks):
+            if ci == n_chucks - 1:
+                chunk = input_values[:, ci * chuck_len: -1]
+            else:
+                chunk = input_values[:, ci * chuck_len: (ci + 1) * chuck_len]
+            embedding = wav2vec_model(
+                chunk.to(device), return_dict=False
+            )[0]
+            # embedding: torch.Size([1, x, 1024])
+            audio_embeddings.append(embedding.cpu())
 
+    audio_embedding = torch.cat(audio_embeddings, 1)
     audio_feat_path = os.path.join(tmp_dir, f"{output_name}_wav2vec.npy")
     np.save(audio_feat_path, audio_embedding[0].cpu().numpy())
 
