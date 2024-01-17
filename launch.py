@@ -6,7 +6,7 @@ import traceback
 import warnings
 import subprocess
 from threading import Thread
-from multiprocessing import Process
+import multiprocessing
 from contextlib import redirect_stdout, redirect_stderr
 import shutil
 import json
@@ -33,6 +33,10 @@ logging.basicConfig(
     datefmt="%m/%d/%Y %H:%M:%S",
     level=logging.INFO,
 )
+try:
+    multiprocessing.set_start_method('spawn')
+except RuntimeError:
+    pass
 
 
 def download(resource_url, target_dir, filename, default_ext):
@@ -64,54 +68,48 @@ def tf_log_img(writer: SummaryWriter, tag, image_path, global_step=0):
 
 
 def run_sync(model_cfg, params: TaskParams, /,
-             *, logger, result_file: str, result, log_file: str = None):
-    tensor_writer = None
-    if params.tf_logging_dir is not None:
-        try:
-            tensor_writer = SummaryWriter(params.tf_logging_dir)
-            tf_log_img(tensor_writer, 'input image', params.image_path)
-            tf_log_img(tensor_writer, 'cropped image', params.cropped_image_path)
-            # wav_16k_path = os.path.join(params.task_dir, 'tmp', f"output_16K.wav")
-            speech_array, sampling_rate = torchaudio.load(params.audio_path)
-            tensor_writer.add_audio('input audio', speech_array[0], 0, sample_rate=sampling_rate)
-        except Exception as e:
-            print(str(e), file=sys.stderr)
-
+             *, logger, result_file: str, result, log_file: str):
     if result is None:
         result = {}
-    try:
-        result['inference_start_at'] = datetime.now().isoformat()
-        if log_file is None:
-            inference(model_cfg, params)
-        else:
-            with open(log_file, 'w') as lf:
-                with redirect_stdout(lf), redirect_stderr(lf):
-                    inference(model_cfg, params, log_file=log_file)
-        result['success'] = True
-        result['cropped_image_file'] = os.path.basename(params.cropped_image_path)
-        result['output_video_file'] = os.path.basename(params.output_video_path)
-        result['output_video_duration'] = os.path.basename(params.output_video_duration)
 
-        # if tensor_writer is not None:
-        #     try:
-        #         frames, a_frames, va_info = torchvision.io.read_video(params.output_video_path, output_format="TCHW")
-        #         # print(va_info)
-        #         if len(frames.shape) == 4:
-        #             frames = frames.unsqueeze(0)
-        #         tensor_writer.add_video('output video', frames, 0)
-        #     except Exception as e:
-        #         print(str(e), file=sys.stderr)
+    with open(log_file, 'w') as lf:
+        with redirect_stdout(lf), redirect_stderr(lf):
 
-    except Exception as e:
-        traceback.print_exc()
-        logger.error(f'{params.task_id} {str(e)}')
-        result['success'] = False
-        result['error_message'] = str(e)
-    result['finished_at'] = datetime.now().isoformat()
+            if params.tf_logging_dir is not None:
+                try:
+                    tensor_writer = SummaryWriter(params.tf_logging_dir)
+                    tf_log_img(tensor_writer, 'input image', params.image_path)
+                    tf_log_img(tensor_writer, 'cropped image', params.cropped_image_path)
+                    # wav_16k_path = os.path.join(params.task_dir, 'tmp', f"output_16K.wav")
+                    speech_array, sampling_rate = torchaudio.load(params.audio_path)
+                    tensor_writer.add_audio('input audio', speech_array[0], 0, sample_rate=sampling_rate)
+                except Exception as e:
+                    print(str(e), file=sys.stderr)
 
-    json.dump(result, open(result_file, 'w'), indent=2)
-    logger.info(f'{params.task_id} Finished.')
+            try:
+                result['inference_start_at'] = datetime.now().isoformat()
 
+                inference(model_cfg, params, log_file=log_file)
+
+                result['success'] = True
+                result['cropped_image_file'] = os.path.basename(params.cropped_image_path)
+                result['output_video_file'] = os.path.basename(params.output_video_path)
+                result['output_video_duration'] = os.path.basename(params.output_video_duration)
+
+            except Exception as e:
+                print(str(e), file=sys.stderr)
+                traceback.print_exc()
+                logger.error(f'{params.task_id} {str(e)}')
+                result['success'] = False
+                result['error_message'] = str(e)
+            result['finished_at'] = datetime.now().isoformat()
+
+            json.dump(result, open(result_file, 'w'), indent=2)
+
+    if result['success']:
+        logger.info(f'{params.task_id} Finished.')
+    else:
+        logger.error(f'{params.task_id} Failed: {result["error_message"]}')
     return result
 
 
@@ -133,6 +131,7 @@ def launch(config, task: Task, launch_options: LaunchOptions, logger=None):
                 free, total = torch.cuda.mem_get_info(device_index)
                 k = 1024
                 if free < 10 * k * k * k:
+                    logger.warning(f'{params.task_id}: device occupied')
                     return {
                         'success': False,
                         'error_message': 'device occupied',
@@ -204,7 +203,7 @@ def launch(config, task: Task, launch_options: LaunchOptions, logger=None):
         if params.run_mode == 'sync':
             res = run_sync(*args, **kwargs)
         elif params.run_mode == 'process':
-            process = Process(target=run_sync, args=args, kwargs=kwargs)
+            process = multiprocessing.Process(target=run_sync, args=args, kwargs=kwargs)
             process.start()
             res['pid'] = process.pid
         else:  # thread
