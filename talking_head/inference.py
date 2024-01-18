@@ -163,20 +163,20 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
     speech_array, sampling_rate = torchaudio.load(wav_16k_path)
     audio_data = speech_array.squeeze().numpy()
     inputs = wav2vec_processor(
-        audio_data, sampling_rate=16_000, return_tensors="pt", padding=True
+        audio_data, sampling_rate=sampling_rate, return_tensors="pt", padding=True
     )
     # torch.Size([1, x])
     input_values = inputs.input_values
-    chuck_len = 16_000 * 20
+    chuck_len = sampling_rate * 20
     n_chucks = math.ceil(input_values.shape[1] / chuck_len)
-    if input_values.shape[1] % chuck_len < 16_000 * 2:
+    if input_values.shape[1] % chuck_len < sampling_rate * 2:
         n_chucks -= 1
 
     audio_embeddings = []
     with torch.no_grad():
         for ci in range(n_chucks):
             if ci == n_chucks - 1:
-                chunk = input_values[:, ci * chuck_len: -1]
+                chunk = input_values[:, ci * chuck_len:]
             else:
                 chunk = input_values[:, ci * chuck_len: (ci + 1) * chuck_len]
             embedding = wav2vec_model(
