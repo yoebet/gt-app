@@ -168,9 +168,12 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
     # torch.Size([1, x])
     input_values = inputs.input_values
     chuck_len = sampling_rate * 20
-    n_chucks = math.ceil(input_values.shape[1] / chuck_len)
-    if input_values.shape[1] % chuck_len < sampling_rate * 2:
-        n_chucks -= 1
+    if input_values.shape[1] <= chuck_len * 1.1:
+        n_chucks = 1
+    else:
+        n_chucks = math.ceil(input_values.shape[1] / chuck_len)
+        if input_values.shape[1] % chuck_len < sampling_rate * 2:
+            n_chucks -= 1
 
     audio_embeddings = []
     with torch.no_grad():
@@ -185,7 +188,10 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
             # embedding: torch.Size([1, x, 1024])
             audio_embeddings.append(embedding.cpu())
 
-    audio_embedding = torch.cat(audio_embeddings, 1)
+    if len(audio_embeddings) == 1:
+        audio_embedding = audio_embeddings[0]
+    else:
+        audio_embedding = torch.cat(audio_embeddings, 1)
     audio_feat_path = os.path.join(tmp_dir, f"{output_name}_wav2vec.npy")
     np.save(audio_feat_path, audio_embedding[0].cpu().numpy())
 
