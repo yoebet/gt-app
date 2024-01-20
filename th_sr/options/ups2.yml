@@ -8,7 +8,7 @@ num_gpu: auto  # official: 8 GPUs
 datasets:
   val:
     name: talking_head
-    type: TalkingHeadVideoDataset
+    type: VideoFrameImagesDataset
     dataroot_lq: data/th/lq
     cache_data: false
     io_backend:

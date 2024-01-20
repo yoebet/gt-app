@@ -10,15 +10,15 @@ sys.path.append(root_path)
 import th_sr.talking_head.archs
 import th_sr.talking_head.models
 import th_sr.talking_head.dataset
-from th_sr.talking_head.dataset.th_video_dataset import LqVideoTensorsDataset
+from dataset.video_tensors_dataset import LqVideoTensorsDataset
 
 from basicsr.data import build_dataloader
 from basicsr.models import build_model
-from basicsr.utils import get_env_info, get_root_logger, get_time_str, make_exp_dirs
+from basicsr.utils import get_env_info, make_exp_dirs
 from basicsr.utils.options import dict2str, parse_options
 
 
-def upscape(root_path):
+def upscale(root_path):
     os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
     args = ['-opt', 'options/ups2.yml', '--force_yml', 'datasets:val:cache_data=false']
@@ -34,8 +34,6 @@ def upscape(root_path):
     # torch.backends.cudnn.deterministic = True
 
     make_exp_dirs(opt)
-    log_file = osp.join(opt['path']['log'], f"{opt['name']}_{get_time_str()}.log")
-    # logger = get_root_logger(logger_name='basicsr', log_level=logging.INFO, log_file=log_file)
     print(get_env_info())
     print(dict2str(opt))
 
@@ -68,4 +66,5 @@ def upscape(root_path):
 
 if __name__ == '__main__':
     root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
-    upscape(root_path)
+    os.chdir(root_path)
+    upscale(root_path)

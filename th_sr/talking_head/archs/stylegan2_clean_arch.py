@@ -18,7 +18,7 @@ class NormStyleCode(nn.Module):
         Returns:
             Tensor: Normalized tensor.
         """
-        return x * torch.rsqrt(torch.mean(x**2, dim=1, keepdim=True) + 1e-8)
+        return x * torch.rsqrt(torch.mean(x ** 2, dim=1, keepdim=True) + 1e-8)
 
 
 class ModulatedConv2d(nn.Module):
@@ -59,7 +59,7 @@ class ModulatedConv2d(nn.Module):
 
         self.weight = nn.Parameter(
             torch.randn(1, out_channels, in_channels, kernel_size, kernel_size) /
-            math.sqrt(in_channels * kernel_size**2))
+            math.sqrt(in_channels * kernel_size ** 2))
         self.padding = kernel_size // 2
 
     def forward(self, x, style):
@@ -125,7 +125,7 @@ class StyleConv(nn.Module):
 
     def forward(self, x, style, noise=None):
         # modulate
-        out = self.modulated_conv(x, style) * 2**0.5  # for conversion
+        out = self.modulated_conv(x, style) * 2 ** 0.5  # for conversion
         # noise injection
         if noise is None:
             b, _, h, w = out.shape
@@ -251,12 +251,12 @@ class StyleGAN2GeneratorClean(nn.Module):
         in_channels = channels['4']
         # noise
         for layer_idx in range(self.num_layers):
-            resolution = 2**((layer_idx + 5) // 2)
+            resolution = 2 ** ((layer_idx + 5) // 2)
             shape = [1, 1, resolution, resolution]
             self.noises.register_buffer(f'noise{layer_idx}', torch.randn(*shape))
         # style convs and to_rgbs
         for i in range(3, self.log_size + 1):
-            out_channels = channels[f'{2**i}']
+            out_channels = channels[f'{2 ** i}']
             self.style_convs.append(
                 StyleConv(
                     in_channels,
@@ -283,7 +283,7 @@ class StyleGAN2GeneratorClean(nn.Module):
 
         for i in range(3, self.log_size + 1):
             for _ in range(2):
-                noises.append(torch.randn(1, 1, 2**i, 2**i, device=device))
+                noises.append(torch.randn(1, 1, 2 ** i, 2 ** i, device=device))
 
         return noises
 

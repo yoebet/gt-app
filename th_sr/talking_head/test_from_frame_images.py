@@ -16,7 +16,7 @@ from basicsr.utils import get_env_info, get_root_logger, get_time_str, make_exp_
 from basicsr.utils.options import dict2str, parse_options
 
 
-def upscape(root_path):
+def upscale(root_path):
     os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
     args = ['-opt', 'options/ups2.yml', '--force_yml', 'datasets:val:cache_data=false']
@@ -61,4 +61,5 @@ def upscape(root_path):
 
 if __name__ == '__main__':
     root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
-    upscape(root_path)
+    os.chdir(root_path)
+    upscale(root_path)

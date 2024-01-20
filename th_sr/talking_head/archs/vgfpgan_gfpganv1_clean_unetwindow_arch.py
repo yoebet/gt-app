@@ -154,6 +154,7 @@ class ResBlock(nn.Module):
         out = out + skip
         return out
 
+
 def zero_module(module):
     """
     Zero out the parameters of a module and return it.
@@ -161,6 +162,8 @@ def zero_module(module):
     for p in module.parameters():
         p.detach().zero_()
     return module
+
+
 class ConvReLUConv(nn.Module):
     """Residual block with bilinear upsampling/downsampling.
 
@@ -185,6 +188,7 @@ class ConvReLUConv(nn.Module):
             self.scale_factor = 1
         if zero_out_init:
             self.conv2 = zero_module(self.conv2)
+
     def forward(self, x):
         out = F.leaky_relu_(self.conv1(x), negative_slope=0.2)
         # upsample/downsample
@@ -235,13 +239,13 @@ class GFPGANv1Clean_UnetWindow(nn.Module):
             narrow=1,
             sft_half=False,
             return_rgb=True,
-            randomize_noise= "zero",
+            randomize_noise="zero",
             # for recurrent
             zero_init=False,
             zero_out_init=True,
             temp_type='unet_window'
 
-            ):
+    ):
 
         super(GFPGANv1Clean_UnetWindow, self).__init__()
         self.input_is_latent = input_is_latent
@@ -265,7 +269,7 @@ class GFPGANv1Clean_UnetWindow(nn.Module):
         }
 
         self.log_size = int(math.log(out_size, 2))
-        first_out_size = 2**(int(math.log(out_size, 2)))
+        first_out_size = 2 ** (int(math.log(out_size, 2)))
         self.out_size = out_size
         self.conv_body_first = nn.Conv2d(3, channels[f'{first_out_size}'], 1)
 
@@ -274,9 +278,9 @@ class GFPGANv1Clean_UnetWindow(nn.Module):
         self.conv_body_down = nn.ModuleList()
         self.window_down = nn.ModuleList()
         for i in range(self.log_size, 2, -1):
-            out_channels = channels[f'{2**(i - 1)}']
+            out_channels = channels[f'{2 ** (i - 1)}']
             self.conv_body_down.append(ResBlock(in_channels, out_channels, mode='down'))
-            self.window_down.append(ConvReLUConv(out_channels*3, out_channels, zero_out_init=zero_out_init))
+            self.window_down.append(ConvReLUConv(out_channels * 3, out_channels, zero_out_init=zero_out_init))
             # self.recurrent_forward.append(ConvReLUConv(sft_out_channels*3, sft_out_channels,zero_out_init=zero_out_init))
             in_channels = out_channels
 
@@ -286,14 +290,14 @@ class GFPGANv1Clean_UnetWindow(nn.Module):
         in_channels = channels['4']
         self.conv_body_up = nn.ModuleList()
         for i in range(3, self.log_size + 1):
-            out_channels = channels[f'{2**i}']
+            out_channels = channels[f'{2 ** i}']
             self.conv_body_up.append(ResBlock(in_channels, out_channels, mode='up'))
             in_channels = out_channels
 
         # to RGB
         self.toRGB = nn.ModuleList()
         for i in range(3, self.log_size + 1):
-            self.toRGB.append(nn.Conv2d(channels[f'{2**i}'], 3, 1))
+            self.toRGB.append(nn.Conv2d(channels[f'{2 ** i}'], 3, 1))
 
         if different_w:
             linear_out_channel = (int(math.log(out_size, 2)) * 2 - 2) * num_style_feat
@@ -326,7 +330,7 @@ class GFPGANv1Clean_UnetWindow(nn.Module):
         self.recurrent_backward = nn.ModuleList()
         self.recurrent_forward = nn.ModuleList()
         for i in range(3, self.log_size + 1):
-            out_channels = channels[f'{2**i}']
+            out_channels = channels[f'{2 ** i}']
             if sft_half:
                 sft_out_channels = out_channels
             else:
@@ -339,20 +343,27 @@ class GFPGANv1Clean_UnetWindow(nn.Module):
                 nn.Sequential(
                     nn.Conv2d(out_channels, out_channels, 3, 1, 1), nn.LeakyReLU(0.2, True),
                     nn.Conv2d(out_channels, sft_out_channels, 3, 1, 1)))
-            self.recurrent_forward.append(ConvReLUConv(sft_out_channels*3, sft_out_channels,zero_out_init=zero_out_init))
+            self.recurrent_forward.append(
+                ConvReLUConv(sft_out_channels * 3, sft_out_channels, zero_out_init=zero_out_init))
             # assert temp_type == 'recurrent' or temp_type == 'window' or self.temp_type == 'none'
             if temp_type == 'recurrent':
-                self.recurrent_backward.append(ConvReLUConv(sft_out_channels + sft_out_channels, sft_out_channels, zero_out_init=zero_out_init))
-                self.recurrent_backward.append(ConvReLUConv(sft_out_channels + sft_out_channels, sft_out_channels,zero_out_init=zero_out_init))
-                self.recurrent_forward.append(ConvReLUConv(sft_out_channels + sft_out_channels, sft_out_channels,zero_out_init=zero_out_init))
-                self.recurrent_forward.append(ConvReLUConv(sft_out_channels + sft_out_channels, sft_out_channels,zero_out_init=zero_out_init))
+                self.recurrent_backward.append(
+                    ConvReLUConv(sft_out_channels + sft_out_channels, sft_out_channels, zero_out_init=zero_out_init))
+                self.recurrent_backward.append(
+                    ConvReLUConv(sft_out_channels + sft_out_channels, sft_out_channels, zero_out_init=zero_out_init))
+                self.recurrent_forward.append(
+                    ConvReLUConv(sft_out_channels + sft_out_channels, sft_out_channels, zero_out_init=zero_out_init))
+                self.recurrent_forward.append(
+                    ConvReLUConv(sft_out_channels + sft_out_channels, sft_out_channels, zero_out_init=zero_out_init))
                 if zero_init:
                     print("Warning: this implementation has bugs")
                     exit()
                     default_init_weights([self.recurrent_backward, self.recurrent_forward], scale=0.0, bias_fill=0.0)
             elif temp_type == 'window':
-                self.recurrent_forward.append(ConvReLUConv(sft_out_channels*3, sft_out_channels,zero_out_init=zero_out_init))
-                self.recurrent_forward.append(ConvReLUConv(sft_out_channels*3, sft_out_channels,zero_out_init=zero_out_init))
+                self.recurrent_forward.append(
+                    ConvReLUConv(sft_out_channels * 3, sft_out_channels, zero_out_init=zero_out_init))
+                self.recurrent_forward.append(
+                    ConvReLUConv(sft_out_channels * 3, sft_out_channels, zero_out_init=zero_out_init))
             elif temp_type == 'unet_window':
                 pass
                 # self.recurrent_forward.append(ConvReLUConv(sft_out_channels*3, sft_out_channels,zero_out_init=zero_out_init))
@@ -364,31 +375,36 @@ class GFPGANv1Clean_UnetWindow(nn.Module):
                 torch.load(GFPGANv1_load_path, map_location=lambda storage, loc: storage)['params_ema'], strict=False)
 
     def temp_window(self, conditions_list):
-        out_pyramid_list = [] # n, 14, b, c, h, w
+        out_pyramid_list = []  # n, 14, b, c, h, w
         conditions = conditions_list[-1]
         n = len(conditions_list)
-        for i in range(n): # different time
+        for i in range(n):  # different time
             out_pyramid_list_i = []
-            for j in range(len(conditions_list[-1])): # different res
+            for j in range(len(conditions_list[-1])):  # different res
                 out_pyramid_list_i.append(torch.zeros_like(conditions_list[i][j]))
             out_pyramid_list.append(out_pyramid_list_i)
         # Pyramid_list = []
 
-        assert len(self.recurrent_forward) == len(conditions), f"number of recurrent module, {len(self.recurrent_forward)} == {len(conditions)}"
-        for j in range(len(conditions)): # different res
-            for i in range(n): # different time
+        assert len(self.recurrent_forward) == len(
+            conditions), f"number of recurrent module, {len(self.recurrent_forward)} == {len(conditions)}"
+        for j in range(len(conditions)):  # different res
+            for i in range(n):  # different time
                 # if i == 0:
-                feat_fuse = torch.cat([conditions_list[np.clip(i-1, 0, n-1)][j], conditions_list[i][j], conditions_list[np.clip(i+1, 0, n-1)][j]], dim=1)
+                feat_fuse = torch.cat([conditions_list[np.clip(i - 1, 0, n - 1)][j], conditions_list[i][j],
+                                       conditions_list[np.clip(i + 1, 0, n - 1)][j]], dim=1)
                 out_pyramid_list[i][j] = self.recurrent_forward[j](feat_fuse) + conditions_list[i][j]
                 # out_pyramid_list[i][j] = (conditions_list[np.clip(i-1, 0, n-1)][j] + conditions_list[i][j] + conditions_list[np.clip(i+1, 0, n-1)][j])/3.0
                 # out_pyramid_list[i][j] = self.recurrent_forward[j](feat_fuse) + conditions_list[i][j]
         return out_pyramid_list
-                # out_pyramid_list[i][j] = feat_prop
+        # out_pyramid_list[i][j] = feat_prop
+
     def unet_window(self, temporal_feature, index):
 
-        n,c,h,w = temporal_feature.size() # 1,2,3,4,5
-        padded_input = torch.concat([temporal_feature[0:1, ...], temporal_feature, temporal_feature[n-1:, ...]], dim=0) # 1123455
-        concat_padded_input = torch.concat([padded_input[0:n, ...], padded_input[1:n+1, ...], padded_input[2:n+2, ...]], dim=1)
+        n, c, h, w = temporal_feature.size()  # 1,2,3,4,5
+        padded_input = torch.concat([temporal_feature[0:1, ...], temporal_feature, temporal_feature[n - 1:, ...]],
+                                    dim=0)  # 1123455
+        concat_padded_input = torch.concat(
+            [padded_input[0:n, ...], padded_input[1:n + 1, ...], padded_input[2:n + 2, ...]], dim=1)
         # tensor([[1, 1, 2],
         # [1, 2, 3],
         # [2, 3, 4],
@@ -397,11 +413,14 @@ class GFPGANv1Clean_UnetWindow(nn.Module):
         # feat_fuse = torch.cat([], dim=1)
         out_feature = self.recurrent_forward[index](concat_padded_input) + temporal_feature
         return out_feature
+
     def unet_window_down(self, temporal_feature, index):
 
-        n,c,h,w = temporal_feature.size() # 1,2,3,4,5
-        padded_input = torch.concat([temporal_feature[0:1, ...], temporal_feature, temporal_feature[n-1:, ...]], dim=0) # 1123455
-        concat_padded_input = torch.concat([padded_input[0:n, ...], padded_input[1:n+1, ...], padded_input[2:n+2, ...]], dim=1)
+        n, c, h, w = temporal_feature.size()  # 1,2,3,4,5
+        padded_input = torch.concat([temporal_feature[0:1, ...], temporal_feature, temporal_feature[n - 1:, ...]],
+                                    dim=0)  # 1123455
+        concat_padded_input = torch.concat(
+            [padded_input[0:n, ...], padded_input[1:n + 1, ...], padded_input[2:n + 2, ...]], dim=1)
         # tensor([[1, 1, 2],
         # [1, 2, 3],
         # [2, 3, 4],
@@ -410,7 +429,6 @@ class GFPGANv1Clean_UnetWindow(nn.Module):
         # feat_fuse = torch.cat([], dim=1)
         out_feature = self.window_down[index](concat_padded_input) + temporal_feature
         return out_feature
-
 
     def forward(self, x, return_latents=False, return_rgb=True, randomize_noise=True, interpolate=False):
         """Forward function for GFPGANv1Clean.
@@ -425,9 +443,9 @@ class GFPGANv1Clean_UnetWindow(nn.Module):
 
         # Preprocessing
         b, n, c, h, w = x.size()
-        assert b==1, "only support batch size=1"
+        assert b == 1, "only support batch size=1"
         x = x[0, ...]
-        x = x*2.0-1.0
+        x = x * 2.0 - 1.0
 
         conditions = []
         unet_skips = []
@@ -472,15 +490,13 @@ class GFPGANv1Clean_UnetWindow(nn.Module):
         if not randomize_noise:
             self.randomize_noise = False
         image, _ = self.stylegan_decoder([style_code],
-                                        conditions,
-                                        return_latents=return_latents,
-                                        input_is_latent=self.input_is_latent,
-                                        randomize_noise=self.randomize_noise)
-            # out_list.append(image)
-
+                                         conditions,
+                                         return_latents=return_latents,
+                                         input_is_latent=self.input_is_latent,
+                                         randomize_noise=self.randomize_noise)
+        # out_list.append(image)
 
         out = torch.unsqueeze(image, 0)
-        out = (out+1.0)/2.0
-
+        out = (out + 1.0) / 2.0
 
         return out
