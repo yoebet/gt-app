@@ -28,3 +28,16 @@ ffmpeg-python
 av
 tensorboard
 moviepy
+
+# facexlib
+# lmdb
+tqdm
+# yapf
+# einops
+# timm
+# realesrgan
+# pyav
+
+# tb-nightly
+# lpips
+easydict

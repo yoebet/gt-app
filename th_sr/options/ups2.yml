@@ -1,0 +1,50 @@
+name: talking_head_sr
+model_type: TalkingHeadVideoRecurrentModel
+scale: 2
+num_gpu: auto  # official: 8 GPUs
+# manual_seed: 0
+
+# dataset and data loader settings
+datasets:
+  val:
+    name: talking_head
+    type: TalkingHeadVideoDataset
+    dataroot_lq: data/th/lq
+    cache_data: false
+    io_backend:
+      type: disk
+    num_frame: -1
+    max_frames_per_folder: 80
+
+
+# network structures
+network_g:
+  type: GFPGANv1Clean_UnetWindow
+  out_size: 512
+  num_style_feat: 512
+  channel_multiplier: 2
+  fix_decoder: True
+  num_mlp: 8
+  input_is_latent: true
+  different_w: true
+  narrow: 1
+  sft_half: true
+  return_rgb: false
+  randomize_noise: zero
+  zero_out_init: True
+  temp_type: unet_window
+
+# path
+path:
+  pretrain_network_g: ./pretrained_ckpt/temporal_gfpgan.pth
+  strict_load_g: true
+  resume_state: ~
+
+# validation settings
+val:
+  val_freq: !!float 5e2
+  # val_freq: !!float 1
+  save_img: true
+  save_input: true
+  temp_psz: 16
+

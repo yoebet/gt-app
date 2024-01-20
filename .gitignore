@@ -13,3 +13,6 @@ out/
 requirements-v.txt
 /tasks/
 /logs/
+/th_sr/data/
+/th_sr/results/
+/th_sr/pretrained_ckpt/
