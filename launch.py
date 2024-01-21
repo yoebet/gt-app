@@ -94,12 +94,11 @@ def run_sync(model_cfg, params: TaskParams, /,
                 result['success'] = True
                 result['cropped_image_file'] = os.path.basename(params.cropped_image_path)
                 result['output_video_file'] = os.path.basename(params.output_video_path)
-                result['output_video_duration'] = os.path.basename(params.output_video_duration)
+                result['output_video_duration'] = params.output_video_duration
 
             except Exception as e:
                 print(str(e), file=sys.stderr)
                 traceback.print_exc()
-                logger.error(f'{params.task_id} {str(e)}')
                 result['success'] = False
                 result['error_message'] = str(e)
             result['finished_at'] = datetime.now().isoformat()
@@ -107,9 +106,9 @@ def run_sync(model_cfg, params: TaskParams, /,
             json.dump(result, open(result_file, 'w'), indent=2)
 
     if result['success']:
-        logger.info(f'{params.task_id} Finished.')
+        logger.info(f'task {params.task_id} Finished.')
     else:
-        logger.error(f'{params.task_id} Failed: {result["error_message"]}')
+        logger.error(f'task {params.task_id} Failed: {result["error_message"]}')
     return result
 
 
@@ -159,7 +158,7 @@ def launch(config, task: Task, launch_options: LaunchOptions, logger=None):
     audio_duration = subprocess.check_output(
         f'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{params.audio_path}"',
         shell=True).decode()
-    params.output_video_duration = audio_duration.strip()
+    params.audio_duration = audio_duration.strip()
 
     if params.img_crop:
         params.cropped_image_path = detect_and_crop(params.image_path)

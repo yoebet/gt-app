@@ -1,11 +1,6 @@
-import argparse
-import json
-import os
-
 import cv2
 import numpy as np
 import torch
-import torchvision
 import torchvision.transforms as transforms
 from PIL import Image
 
@@ -36,19 +31,14 @@ def get_netG(checkpoint_path, device):
 
 
 @torch.no_grad()
-def render_video(
+def render_video_imgs(
         net_G,
         src_img_path,
         exp_path,
-        wav_path,
-        output_path,
         device,
-        silent=False,
         semantic_radius=13,
-        fps=30,
         split_size=16,
         no_move=False,
-        log_file=None,
 ):
     """
     exp: (N, 73)
@@ -104,16 +94,6 @@ def render_video(
         output_imgs.append(output_dict["fake_image"].cpu().clamp_(-1, 1))
 
     output_imgs = torch.cat(output_imgs, 0)
-    transformed_imgs = ((output_imgs + 1) / 2 * 255).to(torch.uint8).permute(0, 2, 3, 1)
 
-    if silent:
-        torchvision.io.write_video(output_path, transformed_imgs.cpu(), fps)
-    else:
-        silent_video_path = f"{output_path}-silent.mp4"
-        torchvision.io.write_video(silent_video_path, transformed_imgs.cpu(), fps)
-        cmd = f"ffmpeg -loglevel quiet -y -i {silent_video_path} -i {wav_path} -shortest {output_path}"
-        if log_file is None:
-            os.system(cmd)
-        else:
-            os.system(f'{cmd} >> "{log_file}" 2>&1')
-        os.remove(silent_video_path)
+    return output_imgs.cpu()
+

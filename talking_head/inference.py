@@ -1,5 +1,3 @@
-import argparse
-import json
 import os
 import math
 import shutil
@@ -7,20 +5,19 @@ import subprocess
 from yacs.config import CfgNode
 import numpy as np
 import torch
+import torchvision
 import torchaudio
-from scipy.io import loadmat
 from transformers import Wav2Vec2Processor
 from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2Model
 
 from core.networks.diffusion_net import DiffusionNet
 from core.networks.diffusion_util import NoisePredictor, VarianceSchedule
 from core.utils import (
-    crop_src_image,
     get_pose_params,
     get_video_style_clip,
     get_wav2vec_audio_window,
 )
-from generators.utils import get_netG, render_video
+from generators.utils import get_netG, render_video_imgs
 from talking_head.params import TaskParams
 from talking_head.crop import detect_and_crop
 
@@ -51,9 +48,8 @@ def get_diff_net(cfg, device):
 @torch.no_grad()
 def inference_one_video(
         cfg,
+        params: TaskParams,
         audio_path,
-        style_clip_path,
-        pose_path,
         output_path,
         diff_net,
         device,
@@ -61,6 +57,8 @@ def inference_one_video(
         sample_method="ddim",
         ddim_num_step=10,
 ):
+    style_clip_path = params.style_clip_path
+    pose_path = params.pose_path
     audio_raw = np.load(audio_path)
 
     if max_audio_len is not None:
@@ -168,11 +166,12 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
     # torch.Size([1, x])
     input_values = inputs.input_values
     chuck_len = sampling_rate * 20
-    if input_values.shape[1] <= chuck_len * 1.1:
+    full_len = input_values.shape[1]
+    if full_len <= chuck_len * 1.1:
         n_chucks = 1
     else:
-        n_chucks = math.ceil(input_values.shape[1] / chuck_len)
-        if input_values.shape[1] % chuck_len < sampling_rate * 2:
+        n_chucks = math.ceil(full_len / chuck_len)
+        if full_len % chuck_len < sampling_rate * 2:
             n_chucks -= 1
 
     audio_embeddings = []
@@ -202,9 +201,8 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
         face_motion_path = os.path.join(tmp_dir, f"{output_name}_facemotion.npy")
         inference_one_video(
             cfg,
+            params,
             audio_feat_path,
-            params.style_clip_path,
-            params.pose_path,
             face_motion_path,
             diff_net,
             device,
@@ -212,25 +210,43 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
         )
         # get renderer
         renderer = get_netG("checkpoints/renderer.pt", device)
+
+        fps = 25
+
         # render video
         output_video_path = f"{task_dir}/{output_name}.mp4"
-        render_video(
+        output_imgs = render_video_imgs(
             renderer,
             src_img_path,
             face_motion_path,
-            wav_16k_path,
-            output_video_path,
+            # wav_16k_path,
+            # output_video_path,
             device,
-            fps=25,
-            no_move=False,
-            log_file=log_file,
+            # fps=fps,
+            # no_move=False,
+            # log_file=log_file,
         )
+
+        transformed_imgs = ((output_imgs + 1) / 2 * 255).to(torch.uint8).permute(0, 2, 3, 1)
+
+        silent_video_path = f"{output_video_path}-silent.mp4"
+        torchvision.io.write_video(silent_video_path, transformed_imgs.cpu(), fps)
+        cmd = f"ffmpeg -loglevel quiet -y -i {silent_video_path} -i {wav_16k_path} -shortest {output_video_path}"
+        if log_file is None:
+            os.system(cmd)
+        else:
+            os.system(f'{cmd} >> "{log_file}" 2>&1')
+        os.remove(silent_video_path)
+
         params.output_video_path = output_video_path
 
-        video_duration = subprocess.check_output(
-            f'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{output_video_path}"',
-            shell=True).decode()
-        params.output_video_duration = video_duration.strip()
+        # video_duration = subprocess.check_output(
+        #     f'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{output_video_path}"',
+        #     shell=True).decode()
+        # params.output_video_duration = video_duration.strip()
+
+        n_frames = output_imgs.shape[0]
+        params.output_video_duration = f'{n_frames / fps:.2f}'
 
         # add watermark
         # no_watermark_video_path = f"{output_video_path}-no_watermark.mp4"
