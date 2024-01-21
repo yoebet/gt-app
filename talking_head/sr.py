@@ -9,17 +9,21 @@ root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
 from th_sr.talking_head.sr import upscale
 
 
-def sr_upscale(video: torch.Tensor, results_root):
+def sr_upscale(video: torch.Tensor, results_root, device_index):
     """
         video: (t,c,h,w), float 0.0 ~ 1.0
 
         return: (final_video_path,)
     """
     o_wd = os.getcwd()
+    o_vd = os.environ['CUDA_VISIBLE_DEVICES']
     th_sr_path = osp.abspath(osp.join(root_path, 'th_sr'))
     os.chdir(th_sr_path)
 
     try:
+        if device_index is not None:
+            os.environ['CUDA_VISIBLE_DEVICES'] = f'{device_index}'
         return upscale(th_sr_path, video, results_root)
     finally:
         os.chdir(o_wd)
+        os.environ['CUDA_VISIBLE_DEVICES'] = o_vd

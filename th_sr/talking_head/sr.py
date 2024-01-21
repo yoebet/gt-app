@@ -1,9 +1,6 @@
-import os
 from os import path as osp
 import sys
-import logging
 import torch
-import torchvision
 
 root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
 sys.path.append(root_path)
@@ -14,16 +11,15 @@ from th_sr.talking_head.dataset.video_tensors_dataset import LqVideoTensorsDatas
 
 from basicsr.data import build_dataloader
 from basicsr.models import build_model
-from basicsr.utils import get_env_info, get_root_logger, get_time_str, make_exp_dirs
+from basicsr.utils import get_env_info, make_exp_dirs
 from basicsr.utils.options import dict2str, parse_options
 
 
 def upscale(root_path, video: torch.Tensor, results_root):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
     option_file = osp.join(root_path, 'options/ups2.yml')
     args = ['-opt', option_file,
-            '--force_yml', 'val:save_input=true',]
+            '--force_yml', 'val:save_input=false',]
 
     opt, _ = parse_options(root_path, is_train=False, args=args)
 
@@ -35,8 +31,6 @@ def upscale(root_path, video: torch.Tensor, results_root):
     # torch.backends.cudnn.deterministic = True
 
     make_exp_dirs(opt)
-    # log_file = osp.join(opt['path']['log'], f"{opt['name']}_{get_time_str()}.log")
-    # logger = get_root_logger(logger_name='basicsr', log_level=logging.INFO, log_file=log_file)
     print(get_env_info())
     print(dict2str(opt))
 

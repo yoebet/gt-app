@@ -236,7 +236,7 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
                 from talking_head.sr import sr_upscale
 
                 sr_results_root = os.path.abspath(f"{tmp_dir}/sr")
-                (silent_video_path,) = sr_upscale(output_imgs, sr_results_root)
+                (silent_video_path,) = sr_upscale(output_imgs, sr_results_root, params.device_index)
             except Exception as e:
                 traceback.print_exc()
 
