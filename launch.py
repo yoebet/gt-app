@@ -3,7 +3,6 @@ import os
 import random
 import sys
 import traceback
-import warnings
 import subprocess
 from threading import Thread
 import multiprocessing
@@ -14,7 +13,6 @@ import time
 from datetime import datetime
 import torch
 import torchaudio
-import torchvision
 from torch.utils.tensorboard import SummaryWriter
 import requests
 from urllib.parse import urlparse
@@ -109,6 +107,8 @@ def run_sync(model_cfg, params: TaskParams, /,
         logger.info(f'task {params.task_id} Finished.')
     else:
         logger.error(f'task {params.task_id} Failed: {result["error_message"]}')
+
+    torch.cuda.empty_cache()
     return result
 
 
@@ -128,8 +128,8 @@ def launch(config, task: Task, launch_options: LaunchOptions, logger=None):
 
             if device_index is not None:
                 free, total = torch.cuda.mem_get_info(device_index)
-                k = 1024
-                if free < 10 * k * k * k:
+                g = 1024 ** 3
+                if free < 10 * g:
                     logger.warning(f'{params.task_id}: device occupied')
                     return {
                         'success': False,

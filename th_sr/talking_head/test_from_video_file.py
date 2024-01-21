@@ -6,7 +6,7 @@ import torch
 import torchvision
 
 root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
-sys.path.append(root_path)
+# sys.path.append(root_path)
 import th_sr.talking_head.archs
 import th_sr.talking_head.models
 import th_sr.talking_head.dataset

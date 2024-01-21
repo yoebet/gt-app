@@ -50,7 +50,8 @@ class TalkingHeadVideoRecurrentModel(VideoBaseModel):
             del self.output
             torch.cuda.empty_cache()
 
-            for idx in tqdm(range(visuals['result'].size(1)), unit='img'):
+            # for idx in tqdm(range(visuals['result'].size(1)), unit='img'):
+            for idx in range(visuals['result'].size(1)):
                 result = visuals['result'][0, idx, :, :, :]
                 result_img = tensor2img([result])  # uint8, bgr
 
@@ -102,7 +103,8 @@ class TalkingHeadVideoRecurrentModel(VideoBaseModel):
 
                 num_seg = math.ceil(self.lq.size(1) / temp_psz)
                 chunks = self.lq.split(num_seg, 1)
-                for frames in tqdm(chunks, unit='chunk'):
+                # for frames in tqdm(chunks, unit='chunk'):
+                for frames in chunks:
                     res = self.net_g(frames).cpu()
                     self.output_list.append(res)
                     torch.cuda.empty_cache()

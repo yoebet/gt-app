@@ -3,7 +3,7 @@ import sys
 import torch
 
 root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
-sys.path.append(root_path)
+# sys.path.append(root_path)
 import th_sr.talking_head.archs
 import th_sr.talking_head.models
 import th_sr.talking_head.dataset
@@ -17,6 +17,9 @@ from basicsr.utils.options import dict2str, parse_options
 
 def upscale(root_path, video: torch.Tensor, results_root):
 
+    torch.backends.cudnn.benchmark = True
+    # torch.backends.cudnn.deterministic = True
+
     option_file = osp.join(root_path, 'options/ups2.yml')
     args = ['-opt', option_file,
             '--force_yml', 'val:save_input=false',]
@@ -26,9 +29,6 @@ def upscale(root_path, video: torch.Tensor, results_root):
     opt['path']['results_root'] = results_root
     opt['path']['log'] = results_root
     opt['path']['visualization'] = results_root
-
-    torch.backends.cudnn.benchmark = True
-    # torch.backends.cudnn.deterministic = True
 
     make_exp_dirs(opt)
     print(get_env_info())

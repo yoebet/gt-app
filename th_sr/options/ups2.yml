@@ -1,7 +1,7 @@
 name: talking_head_sr
 model_type: TalkingHeadVideoRecurrentModel
 scale: 2
-num_gpu: auto  # official: 8 GPUs
+num_gpu: 1  # official: 8 GPUs
 # manual_seed: 0
 
 # dataset and data loader settings

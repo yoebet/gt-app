@@ -131,6 +131,7 @@ def imfrombytes(content, flag='color', float32=False):
         img = img.astype(np.float32) / 255.
     return img
 
+
 import os, sys
 import cv2
 import numpy as np
@@ -139,27 +140,29 @@ from glob import glob
 import yaml
 # from dataset import DatasetRepeater, PersonalDataset, FramePairDataset
 from tqdm import tqdm
+
+
 def folder_to_concat_folder(folder_list, existing_dict=None, order_image=None, res=None, frame_num=-1, concat_dim=1):
     image_name_dict = {}
     image_list = []
     for f in folder_list:
-        image_list += sorted( glob(f+"/*.png"))
-        if frame_num >0:
+        image_list += sorted(glob(f + "/*.png"))
+        if frame_num > 0:
             image_list = image_list[0:frame_num]
         image_name_dict[f] = image_list
-        print(f+str(len(image_list)))
+        print(f + ' ' + str(len(image_list)))
     for f in folder_list:
-        image_list += sorted( glob(f+"/*/*.png"))
-        if frame_num >0:
+        image_list += sorted(glob(f + "/*/*.png"))
+        if frame_num > 0:
             image_list = image_list[0:frame_num]
         image_name_dict[f] = image_list
-        print(f+str(len(image_list)))
+        print(f + ' ' + str(len(image_list)))
     if existing_dict:
         image_name_dict.update(existing_dict)
     if order_image is None:
         order_image = sorted(image_name_dict.keys())
     print("order of video: ", order_image)
-    assert len(image_name_dict[order_image[0]])>0, f"number of frames at {f} should be large than zero"
+    assert len(image_name_dict[order_image[0]]) > 0, f"number of frames at {f} should be large than zero"
     first_image = cv2.cvtColor(cv2.imread(image_name_dict[order_image[0]][0]), cv2.COLOR_BGR2RGB)
     concat_frame_list = []
     if frame_num < 0:
@@ -168,10 +171,10 @@ def folder_to_concat_folder(folder_list, existing_dict=None, order_image=None, r
         image_list_i = []
         for f in order_image:
             img_if = cv2.cvtColor(cv2.imread(image_name_dict[f][i]), cv2.COLOR_BGR2RGB)
-        # final_img = cv2.cvtColor(cv2.imread(final_img_path), cv2.COLOR_BGR2RGB)
-        # gt_img = cv2.cvtColor(cv2.imread(gt_img_path), cv2.COLOR_BGR2RGB)
+            # final_img = cv2.cvtColor(cv2.imread(final_img_path), cv2.COLOR_BGR2RGB)
+            # gt_img = cv2.cvtColor(cv2.imread(gt_img_path), cv2.COLOR_BGR2RGB)
             if res is not None:
-                if img_if.shape[0]!=res:
+                if img_if.shape[0] != res:
                     # print(image_name_dict[f][i])
                     img_if = cv2.resize(img_if, (res, res))
             elif img_if.shape[0] != first_image.shape[0]:
@@ -183,12 +186,11 @@ def folder_to_concat_folder(folder_list, existing_dict=None, order_image=None, r
     return concat_frame_list
 
 
-
-
 def folder_to_video(img_list, output_path):
     from moviepy.editor import ImageSequenceClip
     imgseqclip = ImageSequenceClip(img_list, 25)
     imgseqclip.write_videofile((output_path), logger=None)
+
 
 def imwrite(img, file_path, params=None, auto_mkdir=True):
     """Write image to file.
