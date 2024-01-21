@@ -15,15 +15,20 @@ def sr_upscale(video: torch.Tensor, results_root, device_index):
 
         return: (final_video_path,)
     """
+
     o_wd = os.getcwd()
-    o_vd = os.environ['CUDA_VISIBLE_DEVICES']
+    CVD = 'CUDA_VISIBLE_DEVICES'
+    o_vd = os.environ.get(CVD)
     th_sr_path = osp.abspath(osp.join(root_path, 'th_sr'))
     os.chdir(th_sr_path)
 
     try:
         if device_index is not None:
-            os.environ['CUDA_VISIBLE_DEVICES'] = f'{device_index}'
+            os.environ[CVD] = f'{device_index}'
         return upscale(th_sr_path, video, results_root)
     finally:
         os.chdir(o_wd)
-        os.environ['CUDA_VISIBLE_DEVICES'] = o_vd
+        if o_vd is None:
+            del os.environ[CVD]
+        else:
+            os.environ[CVD] = o_vd
