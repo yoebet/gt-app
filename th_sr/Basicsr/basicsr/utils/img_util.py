@@ -187,7 +187,7 @@ def folder_to_concat_folder(folder_list, existing_dict=None, order_image=None, r
 
 def folder_to_video(img_list, output_path):
     from moviepy.editor import ImageSequenceClip
-    imgseqclip = ImageSequenceClip(img_list, 23.98)
+    imgseqclip = ImageSequenceClip(img_list, 25)
     imgseqclip.write_videofile((output_path), logger=None)
 
 def imwrite(img, file_path, params=None, auto_mkdir=True):

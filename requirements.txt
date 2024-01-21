@@ -41,3 +41,4 @@ tqdm
 # tb-nightly
 # lpips
 easydict
+# basicsr -e .

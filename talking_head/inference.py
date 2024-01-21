@@ -2,6 +2,8 @@ import os
 import math
 import shutil
 import subprocess
+import traceback
+
 from yacs.config import CfgNode
 import numpy as np
 import torch
@@ -20,6 +22,9 @@ from core.utils import (
 from generators.utils import get_netG, render_video_imgs
 from talking_head.params import TaskParams
 from talking_head.crop import detect_and_crop
+
+
+# from talking_head.sr import sr_upscale
 
 
 @torch.no_grad()
@@ -211,32 +216,41 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
         # get renderer
         renderer = get_netG("checkpoints/renderer.pt", device)
 
-        fps = 25
-
         # render video
         output_video_path = f"{task_dir}/{output_name}.mp4"
         output_imgs = render_video_imgs(
             renderer,
             src_img_path,
             face_motion_path,
-            # wav_16k_path,
-            # output_video_path,
             device,
-            # fps=fps,
-            # no_move=False,
-            # log_file=log_file,
         )
 
-        transformed_imgs = ((output_imgs + 1) / 2 * 255).to(torch.uint8).permute(0, 2, 3, 1)
+        output_imgs = (output_imgs + 1) / 2
 
-        silent_video_path = f"{output_video_path}-silent.mp4"
-        torchvision.io.write_video(silent_video_path, transformed_imgs.cpu(), fps)
+        fps = 25
+        silent_video_path = None
+
+        if params.do_sr:
+            print('do sr ...')
+            try:
+                from talking_head.sr import sr_upscale
+
+                sr_results_root = os.path.abspath(f"{tmp_dir}/sr")
+                (silent_video_path,) = sr_upscale(output_imgs, sr_results_root)
+            except Exception as e:
+                traceback.print_exc()
+
+        if silent_video_path is None:
+            transformed_imgs = (output_imgs * 255).to(torch.uint8).permute(0, 2, 3, 1)
+            silent_video_path = f"{output_video_path}-silent.mp4"
+            torchvision.io.write_video(silent_video_path, transformed_imgs.cpu(), fps)
+
         cmd = f"ffmpeg -loglevel quiet -y -i {silent_video_path} -i {wav_16k_path} -shortest {output_video_path}"
         if log_file is None:
             os.system(cmd)
         else:
             os.system(f'{cmd} >> "{log_file}" 2>&1')
-        os.remove(silent_video_path)
+        # os.remove(silent_video_path)
 
         params.output_video_path = output_video_path
 

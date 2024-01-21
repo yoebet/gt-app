@@ -22,5 +22,6 @@ def detect_and_crop(image_path, crop_image_path=None, increase_ratio=0.4):
 
 
 if __name__ == "__main__":
-    path = detect_and_crop("../tmp/20231101-173105.jpeg")
+    # path = detect_and_crop("../tmp/20231101-173105.jpeg", increase_ratio=0.2)
+    path = detect_and_crop("../tmp/20240120-204944.jpeg", increase_ratio=0.9)
     print(path)

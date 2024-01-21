@@ -1,7 +1,7 @@
-import torch
+import math
 from os import path as osp
-from tqdm import tqdm, trange
-import numpy as np
+import torch
+from tqdm import tqdm
 from basicsr.utils import imwrite, tensor2img, folder_to_concat_folder, folder_to_video
 from basicsr.utils.dist_util import get_dist_info
 from basicsr.utils.registry import MODEL_REGISTRY
@@ -26,13 +26,13 @@ class TalkingHeadVideoRecurrentModel(VideoBaseModel):
         rank, world_size = get_dist_info()
 
         num_folders = len(dataset)
-        num_pad = (world_size - (num_folders % world_size)) % world_size
-        if rank == 0:
-            pbar = tqdm(total=len(dataset), unit='folder')
+        # num_pad = (world_size - (num_folders % world_size)) % world_size
+        # if rank == 0:
+        #     pbar = tqdm(total=len(dataset), unit='folder')
 
-        for i in tqdm(range(rank, num_folders + num_pad, world_size)):
-            idx = min(i, num_folders - 1)
-            val_data = dataset[idx]
+        for i in tqdm(range(rank, num_folders, world_size), unit='folder'):
+            # idx = min(i, num_folders - 1)
+            val_data = dataset[i]
             folder = val_data['folder']
             if not isinstance(folder, int):
                 folder = f"{int(i):03d}"
@@ -50,38 +50,36 @@ class TalkingHeadVideoRecurrentModel(VideoBaseModel):
             del self.output
             torch.cuda.empty_cache()
 
-            # evaluate
-            if i < num_folders:
-                for idx in tqdm(range(visuals['result'].size(1))):
-                    result = visuals['result'][0, idx, :, :, :]
-                    result_img = tensor2img([result])  # uint8, bgr
-
-                    if save_img:
-                        img_path = osp.join(vis_path,
-                                            dataset_name, folder,
-                                            f"{idx:04d}_{self.opt['name']}.png")
-                        imwrite(result_img, img_path)
-                        if self.opt['val'].get('save_input', None):
-                            lq_img_path = osp.join(vis_path,
-                                                   dataset_name + '_lq', f"{int(folder):03d}",
-                                                   f"{idx:04d}.png")
-                            imwrite(tensor2img([visuals['lq'][0, idx, :, :, :]]), lq_img_path)
-
-                if rank == 0:
-                    for _ in range(world_size):
-                        pbar.update(1)
-                        pbar.set_description(f'Folder: {folder}')
+            for idx in tqdm(range(visuals['result'].size(1)), unit='img'):
+                result = visuals['result'][0, idx, :, :, :]
+                result_img = tensor2img([result])  # uint8, bgr
 
                 if save_img:
-                    folder_list = [
-                        osp.join(vis_path, dataset_name, folder)]
-                    concat_frame_list = folder_to_concat_folder(folder_list)
-                    video_path = osp.join(vis_path, dataset_name, f"{folder}.mp4")
-                    folder_to_video(concat_frame_list, video_path)
-                torch.cuda.empty_cache()
+                    img_path = osp.join(vis_path,
+                                        dataset_name, folder,
+                                        f"{idx:04d}_{self.opt['name']}.png")
+                    imwrite(result_img, img_path)
+                    if self.opt['val'].get('save_input', None):
+                        lq_img_path = osp.join(vis_path,
+                                               dataset_name + '_lq', f"{int(folder):03d}",
+                                               f"{idx:04d}.png")
+                        imwrite(tensor2img([visuals['lq'][0, idx, :, :, :]]), lq_img_path)
+
+            # if rank == 0:
+            #     for _ in range(world_size):
+            #         pbar.update(1)
+            #         pbar.set_description(f'Folder: {folder}')
+
+            if save_img:
+                folder_list = [
+                    osp.join(vis_path, dataset_name, folder)]
+                concat_frame_list = folder_to_concat_folder(folder_list)
+                video_path = osp.join(vis_path, dataset_name, f"{folder}.mp4")
+                folder_to_video(concat_frame_list, video_path)
+            torch.cuda.empty_cache()
         torch.cuda.empty_cache()
         if rank == 0:
-            pbar.close()
+            # pbar.close()
             if save_img:
                 folder_list = [osp.join(vis_path, dataset_name)]
                 concat_frame_list = folder_to_concat_folder(folder_list)
@@ -89,7 +87,6 @@ class TalkingHeadVideoRecurrentModel(VideoBaseModel):
                 folder_to_video(concat_frame_list, final_video_path)
 
     def test(self):
-        n = self.lq.size(1)
         self.net_g.eval()
 
         # flip_seq = self.opt['val'].get('flip_seq', False)
@@ -103,14 +100,10 @@ class TalkingHeadVideoRecurrentModel(VideoBaseModel):
                 temp_psz = self.opt['val']['temp_psz']
                 self.output_list = []
 
-                num_seg = np.ceil(n / temp_psz).astype(np.int32)
-
-                for fridx in trange(num_seg):
-                    start, end = fridx * temp_psz, (fridx + 1) * temp_psz
-                    end = np.amin([end, n])
-                    # (1,16,3,256,256)
-                    inframes = self.lq[:, start: end, ...]
-                    res = self.net_g(inframes).cpu()
+                num_seg = math.ceil(self.lq.size(1) / temp_psz)
+                chunks = self.lq.split(num_seg, 1)
+                for frames in tqdm(chunks, unit='chunk'):
+                    res = self.net_g(frames).cpu()
                     self.output_list.append(res)
                     torch.cuda.empty_cache()
 

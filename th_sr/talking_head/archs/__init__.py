@@ -13,4 +13,4 @@ for f in arch_filenames:
         new_list.append(f)
 arch_filenames = new_list
 # print("import" + str(arch_filenames))
-_arch_modules = [importlib.import_module(f'talking_head.archs.{file_name}') for file_name in arch_filenames]
+_arch_modules = [importlib.import_module(f'th_sr.talking_head.archs.{file_name}') for file_name in arch_filenames]
