@@ -13,7 +13,7 @@ class Task:
     cfg_scale: Optional[float] = None  # 2.0
     max_gen_len: Optional[int] = None  # seconds
     img_crop: Optional[bool] = True
-    do_sr: Optional[bool] = False
+    do_sr: Optional[bool] = True
 
 
 @dataclass(kw_only=True)

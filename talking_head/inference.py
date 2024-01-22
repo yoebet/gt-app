@@ -171,21 +171,14 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
     # torch.Size([1, x])
     input_values = inputs.input_values
     chuck_len = sampling_rate * 20
-    full_len = input_values.shape[1]
-    if full_len <= chuck_len * 1.1:
-        n_chucks = 1
-    else:
-        n_chucks = math.ceil(full_len / chuck_len)
-        if full_len % chuck_len < sampling_rate * 2:
-            n_chucks -= 1
+    chunks = input_values.split(chuck_len, 1)
+    if len(chunks) > 1 and chunks[-1].shape[1] < sampling_rate:
+        last = torch.cat((chunks[-2], chunks[-1]), 1)
+        chunks = chunks[:-2] + (last,)
 
     audio_embeddings = []
     with torch.no_grad():
-        for ci in range(n_chucks):
-            if ci == n_chucks - 1:
-                chunk = input_values[:, ci * chuck_len:]
-            else:
-                chunk = input_values[:, ci * chuck_len: (ci + 1) * chuck_len]
+        for chunk in chunks:
             embedding = wav2vec_model(
                 chunk.to(device), return_dict=False
             )[0]
