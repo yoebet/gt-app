@@ -24,9 +24,6 @@ from talking_head.params import TaskParams
 from talking_head.crop import detect_and_crop
 
 
-# from talking_head.sr import sr_upscale
-
-
 @torch.no_grad()
 def get_diff_net(cfg, device):
     diff_net = DiffusionNet(
@@ -143,7 +140,10 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
 
     # get audio in 16000Hz
     wav_16k_path = os.path.join(tmp_dir, f"{output_name}_16K.wav")
-    command = f"ffmpeg -y -i {params.audio_path} -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 {wav_16k_path}"
+    cmd_clip = ''
+    if params.max_gen_len is not None:
+        cmd_clip = f'-t {params.max_gen_len}'
+    command = f"ffmpeg -y -i {params.audio_path} -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 {cmd_clip} {wav_16k_path}"
     print(command)
     if log_file is None:
         subprocess.run(command.split())
