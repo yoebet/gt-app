@@ -2,6 +2,7 @@ import dataclasses
 import os
 import random
 import sys
+import ipaddress
 import traceback
 import subprocess
 from threading import Thread
@@ -37,9 +38,28 @@ except RuntimeError:
     pass
 
 
+def verify_url(url):
+    import socket
+    from urllib.parse import urlparse
+    try:
+        parsed_url = urlparse(url)
+        domain_name = parsed_url.netloc
+        host = socket.gethostbyname_ex(domain_name)
+        for ip in host[2]:
+            ip_addr = ipaddress.ip_address(ip)
+            if not ip_addr.is_global:
+                return False
+    except Exception:
+        return False
+
+    return True
+
+
 def download(resource_url, target_dir, filename, default_ext):
     if not resource_url.startswith('http'):
         raise Exception(f'must be url: {resource_url}')
+    # if not verify_url(resource_url):
+    #     raise Exception(f'local resource not allowed')
     resource_path = urlparse(resource_url).path
     resource_name = os.path.basename(resource_path)
     base_name, ext = os.path.splitext(resource_name)
@@ -47,6 +67,8 @@ def download(resource_url, target_dir, filename, default_ext):
         filename = base_name
     if ext is None:
         ext = default_ext
+    elif ext == '.jfif':
+        ext = '.jpg'
     if ext is not None:
         filename = f'{filename}{ext}'
 
@@ -126,15 +148,14 @@ def launch(config, task: Task, launch_options: LaunchOptions, logger=None):
         if device_index is not None:
             params.device = f'cuda:{device_index}'
 
-            if device_index is not None:
-                free, total = torch.cuda.mem_get_info(device_index)
-                g = 1024 ** 3
-                if free < 10 * g:
-                    logger.warning(f'{params.task_id}: device occupied')
-                    return {
-                        'success': False,
-                        'error_message': 'device occupied',
-                    }
+            free, total = torch.cuda.mem_get_info(device_index)
+            g = 1024 ** 3
+            if free < 15 * g:
+                logger.warning(f'{params.task_id}: device occupied')
+                return {
+                    'success': False,
+                    'error_message': 'device occupied',
+                }
         else:
             logger.warning('device_index not set')
             params.device = 'cuda'

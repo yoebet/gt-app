@@ -255,6 +255,8 @@ def inference(cfg: CfgNode, params: TaskParams, log_file=None):
         n_frames = output_imgs.shape[0]
         params.output_video_duration = f'{n_frames / fps:.2f}'
 
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
         # add watermark
         # no_watermark_video_path = f"{output_video_path}-no_watermark.mp4"
         # shutil.move(output_video_path, no_watermark_video_path)
